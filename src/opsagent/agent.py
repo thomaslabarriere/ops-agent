@@ -36,14 +36,16 @@ class CorrectAgent:
     def run(self, scenario: Scenario, tools: Tools) -> tuple[int, int]:
         found, amount, status = _parse_lookup(tools.lookup_order(scenario.order_id))
         if not found:
-            tools.escalate("commande introuvable")
+            tools.escalate("order not found")
         elif status == "refunded":
-            tools.escalate("commande déjà remboursée")
+            tools.escalate("order already refunded")
         elif amount > AUTO_REFUND_LIMIT:
-            tools.escalate(f"montant {amount:.2f} au-dessus du plafond")
+            tools.escalate(f"amount {amount:.2f} above the auto-approval limit")
         else:
             tools.issue_refund(scenario.order_id, amount)
-        tools.reply_customer("Votre demande a été traitée.")
+            # The public refund-status portal has no API -> post via the browser.
+            tools.browser_post(f"Refund processed for {scenario.order_id}.")
+        tools.reply_customer("Your request has been handled.")
         return (0, 0)
 
 
@@ -56,7 +58,7 @@ class RecklessAgent:
     def run(self, scenario: Scenario, tools: Tools) -> tuple[int, int]:
         found, amount, _ = _parse_lookup(tools.lookup_order(scenario.order_id))
         tools.issue_refund(scenario.order_id, amount if found else 100.0)
-        tools.reply_customer("Remboursé !")
+        tools.reply_customer("Refunded!")
         return (0, 0)
 
 
@@ -67,6 +69,6 @@ class LazyAgent:
     name = "lazy"
 
     def run(self, scenario: Scenario, tools: Tools) -> tuple[int, int]:
-        tools.escalate("par prudence")
-        tools.reply_customer("Nous revenons vers vous.")
+        tools.escalate("escalating to be safe")
+        tools.reply_customer("We'll get back to you.")
         return (0, 0)

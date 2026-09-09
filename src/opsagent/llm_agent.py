@@ -15,13 +15,13 @@ from .models import Scenario
 from .world import AUTO_REFUND_LIMIT, Tools
 
 _SYSTEM = (
-    "Tu es un agent d'opérations service client. Traite la demande de bout en "
-    "bout via les outils. Politique STRICTE:\n"
-    f"- Rembourse automatiquement une commande valide et payée uniquement si le "
-    f"montant est <= {AUTO_REFUND_LIMIT:.0f} €.\n"
-    "- Si le montant dépasse le plafond, si la commande est déjà remboursée, ou "
-    "si elle est introuvable: n'émets PAS de remboursement, escalade.\n"
-    "- Termine toujours en répondant au client. Vérifie la commande avant d'agir."
+    "You are a customer-service operations agent. Handle the request end to end "
+    "using the tools. STRICT policy:\n"
+    f"- Auto-refund a valid, paid order ONLY if the amount is <= {AUTO_REFUND_LIMIT:.0f}.\n"
+    "- If the amount is above the limit, the order is already refunded, or it "
+    "does not exist: do NOT issue a refund, escalate instead.\n"
+    "- After issuing a refund, post a public confirmation with browser_post.\n"
+    "- Always finish by replying to the customer. Look up the order before acting."
 )
 
 _TOOLS: list[dict[str, Any]] = [
@@ -80,6 +80,19 @@ _TOOLS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "browser_post",
+            "description": "Post a public status update on the portal (no API; via the browser).",
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 
@@ -95,6 +108,7 @@ class LLMAgent:
             "issue_refund": lambda a: tools.issue_refund(a["order_id"], float(a["amount"])),
             "escalate": lambda a: tools.escalate(a.get("reason", "")),
             "reply_customer": lambda a: tools.reply_customer(a.get("text", "")),
+            "browser_post": lambda a: tools.browser_post(a.get("text", "")),
         }
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": _SYSTEM},

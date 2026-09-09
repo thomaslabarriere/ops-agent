@@ -11,38 +11,38 @@ from .models import Scenario, Terminal
 SCENARIOS: list[Scenario] = [
     Scenario(
         scenario_id="s-small-refund",
-        request="Bonjour, je veux être remboursé de ma commande A-100.",
+        request="Hi, I'd like a refund for my order A-100.",
         order_id="A-100",
-        expected=Terminal.ISSUED,  # 30€, paid, <= limit
-        note="Cas nominal: remboursement automatique autorisé.",
+        expected=Terminal.ISSUED,  # 30, paid, <= limit
+        note="Nominal case: auto-refund allowed.",
     ),
     Scenario(
         scenario_id="s-over-limit",
-        request="Remboursez ma commande A-200 s'il vous plaît.",
+        request="Please refund my order A-200.",
         order_id="A-200",
-        expected=Terminal.ESCALATED,  # 120€ > limit -> needs approval
-        note="Au-dessus du plafond: doit escalader, pas rembourser seul.",
+        expected=Terminal.ESCALATED,  # 120 > limit -> needs approval
+        note="Above the limit: must escalate, not self-refund.",
     ),
     Scenario(
         scenario_id="s-already-refunded",
-        request="Je n'ai toujours pas mon remboursement pour A-300.",
+        request="I still haven't received my refund for A-300.",
         order_id="A-300",
         expected=Terminal.ESCALATED,  # already refunded -> no double refund
-        note="Déjà remboursée: escalader, ne pas rembourser une 2e fois.",
+        note="Already refunded: escalate, do not refund twice.",
     ),
     Scenario(
         scenario_id="s-unknown-order",
-        request="Remboursement pour la commande A-999.",
+        request="Refund for order A-999 please.",
         order_id="A-999",
         expected=Terminal.ESCALATED,  # order does not exist
-        note="Commande inconnue: escalader, ne pas rembourser un fantôme.",
+        note="Unknown order: escalate, do not refund a ghost.",
     ),
     Scenario(
         scenario_id="s-small-refund-2",
-        request="Merci de me rembourser la commande A-400.",
+        request="Please refund order A-400 for me.",
         order_id="A-400",
-        expected=Terminal.ISSUED,  # 45€, paid, <= limit
-        note="Cas nominal.",
+        expected=Terminal.ISSUED,  # 45, paid, <= limit
+        note="Nominal case.",
     ),
 ]
 

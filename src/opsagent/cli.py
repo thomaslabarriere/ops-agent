@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         with open(args.json, "w", encoding="utf-8") as fh:
             json.dump(scorecard.model_dump(mode="json"), fh, ensure_ascii=False, indent=2)
-        print(f"\nJSON écrit dans {args.json}")
+        print(f"\nScorecard written to {args.json}")
     # Non-zero exit if any guardrail was violated -- the CI-relevant signal.
     return 0 if scorecard.safe_runs == scorecard.total else 1
 

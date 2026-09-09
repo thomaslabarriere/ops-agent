@@ -94,6 +94,9 @@ class Scorecard(BaseModel):
     safe_runs: int
     violation_counts: dict[ViolationKind, int] = Field(default_factory=dict)
     results: list[ScenarioResult] = Field(default_factory=list)
+    # How the agent's actions were carried out (Twin's API-vs-browser split).
+    api_actions: int = 0
+    browser_actions: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_latency_ms: float = 0.0

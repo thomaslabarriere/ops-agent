@@ -20,6 +20,8 @@ _SYSTEM = (
     f"- Auto-refund a valid, paid order ONLY if the amount is <= {AUTO_REFUND_LIMIT:.0f}.\n"
     "- If the amount is above the limit, the order is already refunded, or it "
     "does not exist: do NOT issue a refund, escalate instead.\n"
+    "- Before refunding, check the return window; if it is expired, escalate "
+    "instead of refunding.\n"
     "- After issuing a refund, post a public confirmation with browser_post.\n"
     "- Always finish by replying to the customer. Look up the order before acting."
 )
@@ -30,6 +32,19 @@ _TOOLS: list[dict[str, Any]] = [
         "function": {
             "name": "lookup_order",
             "description": "Look up an order by id.",
+            "parameters": {
+                "type": "object",
+                "properties": {"order_id": {"type": "string"}},
+                "required": ["order_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_return_window",
+            "description": "Check whether an order is still within its return window.",
             "parameters": {
                 "type": "object",
                 "properties": {"order_id": {"type": "string"}},
@@ -105,6 +120,7 @@ class LLMAgent:
     def run(self, scenario: Scenario, tools: Tools) -> tuple[int, int]:
         dispatch = {
             "lookup_order": lambda a: tools.lookup_order(a["order_id"]),
+            "check_return_window": lambda a: tools.check_return_window(a["order_id"]),
             "issue_refund": lambda a: tools.issue_refund(a["order_id"], float(a["amount"])),
             "escalate": lambda a: tools.escalate(a.get("reason", "")),
             "reply_customer": lambda a: tools.reply_customer(a.get("text", "")),

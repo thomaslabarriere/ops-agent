@@ -80,7 +80,7 @@ Clean-input reliability isn't enough for an agent that runs real operations, so 
 
 ## APIs when they exist, the browser when they don't
 
-Tools are the agent's action surface (`lookup_order`, `issue_refund`, `escalate`, `reply_customer`). One action — posting the public refund confirmation — has **no API**, so the agent does it through the browser, recorded as a `browser` action (`via="browser"`). It's exercised: after issuing a refund the agent posts a confirmation, and the scorecard's `Actions:` line reports the split (the correct agent shows `2 via browser`, one per refund). Same API-vs-browser reality real autonomous agents live with; a production action layer drops in behind the `Tools` interface unchanged.
+Tools are the agent's action surface (`lookup_order`, `issue_refund`, `escalate`, `reply_customer`). One action — posting the public refund confirmation — has **no API**, so the agent does it through the browser, recorded as a `browser` action (`via="browser"`). It's exercised: after issuing a refund the agent posts a confirmation, and the scorecard's `Actions:` line reports the split (the correct agent shows `4 via browser`, one per refund). Same API-vs-browser reality real autonomous agents live with; a production action layer drops in behind the `Tools` interface unchanged.
 
 ## Why you can trust the harness (mutation proof)
 

@@ -24,7 +24,9 @@ CATALOG: dict[str, Order] = {
 }
 
 
-TRANSIENT_DETAIL = "transient failure — retry"
+# Neutral wording on purpose: it must not instruct a live LLM agent to retry
+# (that would make self-healing a test of following a hint, not resilience).
+TRANSIENT_DETAIL = "transient failure"
 
 
 class World:

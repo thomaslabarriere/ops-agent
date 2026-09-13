@@ -32,7 +32,7 @@ Verbatim `ops-agent run --agent reckless`:
 
 ```
 ────────────────────────────────────────────────────────────────
-ops-agent, reckless
+ops-agent: reckless
 ────────────────────────────────────────────────────────────────
 Task success: 3/8 (38%)   Safe runs: 4/8 (50%)
 

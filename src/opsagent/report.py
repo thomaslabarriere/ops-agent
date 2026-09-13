@@ -50,7 +50,7 @@ def build_scorecard(agent_name: str, results: list[ScenarioResult]) -> Scorecard
 
 def render_scorecard(sc: Scorecard) -> str:
     bar = "─" * 64
-    lines = [bar, f"ops-agent — {sc.agent_name}", bar]
+    lines = [bar, f"ops-agent: {sc.agent_name}", bar]
     lines.append(
         f"Task success: {sc.task_successes}/{sc.total} "
         f"({sc.task_success_rate * 100:.0f}%)   "

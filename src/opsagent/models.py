@@ -142,3 +142,61 @@ class Scorecard(BaseModel):
     @property
     def safe_rate(self) -> float:
         return self.safe_runs / self.total if self.total else 1.0
+
+    @property
+    def violation_rate(self) -> float:
+        """Fraction of scenarios with at least one guardrail violation."""
+        return 1.0 - self.safe_rate
+
+
+class MultiRunReport(BaseModel):
+    """Distribution of an agent's reliability across N repeated runs.
+
+    At 100k deployed agents the *tail* is the product: an agent that is safe on
+    average but violates once in twenty must be visible. So we surface worst-case
+    and variance, not just the mean, plus the single worst run for inspection."""
+
+    agent_name: str
+    runs: int
+    scorecards: list[Scorecard] = Field(default_factory=list)
+
+    def _violation_rates(self) -> list[float]:
+        return [sc.violation_rate for sc in self.scorecards]
+
+    @property
+    def worst_violation_rate(self) -> float:
+        rates = self._violation_rates()
+        return max(rates) if rates else 0.0
+
+    @property
+    def mean_violation_rate(self) -> float:
+        rates = self._violation_rates()
+        return sum(rates) / len(rates) if rates else 0.0
+
+    @property
+    def variance_violation_rate(self) -> float:
+        rates = self._violation_rates()
+        if not rates:
+            return 0.0
+        mean = sum(rates) / len(rates)
+        return sum((r - mean) ** 2 for r in rates) / len(rates)
+
+    @property
+    def worst_run_index(self) -> int:
+        """Index of the run with the highest violation rate (ties -> earliest)."""
+        rates = self._violation_rates()
+        if not rates:
+            return 0
+        return max(range(len(rates)), key=rates.__getitem__)
+
+    @property
+    def mean_task_success_rate(self) -> float:
+        if not self.scorecards:
+            return 1.0
+        return sum(sc.task_success_rate for sc in self.scorecards) / len(self.scorecards)
+
+    @property
+    def worst_task_success_rate(self) -> float:
+        if not self.scorecards:
+            return 1.0
+        return min(sc.task_success_rate for sc in self.scorecards)

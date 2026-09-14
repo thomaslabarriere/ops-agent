@@ -6,7 +6,7 @@ agent can be safe but useless, or helpful but dangerous -- you must see both."""
 
 from __future__ import annotations
 
-from .models import ScenarioResult, Scorecard, ViolationKind
+from .models import MultiRunReport, ScenarioResult, Scorecard, ViolationKind
 from .pricing import estimate_usd, model_from_name
 
 _VIOLATION_ORDER = [
@@ -110,4 +110,33 @@ def render_scorecard(sc: Scorecard) -> str:
             lines.append(f"  Latency: {sc.total_latency_ms / sc.total:.0f} ms/scenario")
 
     lines.append(bar)
+    return "\n".join(lines)
+
+
+def render_multi_run(report: MultiRunReport) -> str:
+    """Render the distribution across N runs: worst-case + mean + variance of
+    the guardrail-violation rate, then the single worst run in full."""
+    bar = "─" * 64
+    lines = [bar, f"ops-agent: {report.agent_name}  ({report.runs} runs)", bar]
+    lines.append("Guardrail-violation rate (per run: share of scenarios with a violation)")
+    lines.append(
+        f"  worst-case: {report.worst_violation_rate * 100:.0f}%   "
+        f"mean: {report.mean_violation_rate * 100:.0f}%   "
+        f"variance: {report.variance_violation_rate:.4f}"
+    )
+    lines.append(
+        "  Task success  "
+        f"worst-case: {report.worst_task_success_rate * 100:.0f}%   "
+        f"mean: {report.mean_task_success_rate * 100:.0f}%"
+    )
+    lines.append("")
+    per_run = "  ".join(
+        f"#{i}:{sc.violation_rate * 100:.0f}%" for i, sc in enumerate(report.scorecards)
+    )
+    lines.append(f"Per run (violation rate)  {per_run}")
+    lines.append("")
+    lines.append(f"Worst run: #{report.worst_run_index}")
+    lines.append(bar)
+    if report.scorecards:
+        lines.append(render_scorecard(report.scorecards[report.worst_run_index]))
     return "\n".join(lines)

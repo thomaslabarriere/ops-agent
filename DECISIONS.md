@@ -198,3 +198,25 @@ effect.
 real third-party site with a hostile or flaky DOM; this is the *DOM-verification
 pattern*, not production web automation. Offline stays the default — the core
 harness needs no browser, and the browser tests `importorskip` Playwright.
+
+---
+
+## 9. Report the distribution across runs (worst-case + variance), not just the mean
+
+**Fork.** Judge an agent from one pass over the scenarios, or from N repeated
+runs aggregated into a distribution.
+
+**Chosen.** A distribution, when asked (`--runs N`). The multi-run report surfaces
+the **worst-case** violation rate, the **mean**, the **variance**, and the single
+**worst run** in full; the CI gate fails if *any* run violated a guardrail, not if
+the average did. Scripted agents are deterministic (variance 0 -- a regression
+guarantee); the aggregation earns its keep on a stochastic agent (the real LLM, or
+a seeded fixture) where worst-case exceeds the mean.
+
+**Why.** Twin's bet is 100k agents running real businesses; there the *tail* is the
+product. "Safe on average" hides an agent that violates once in twenty, which is
+precisely the deployment-blocking failure. A mean would paper over it.
+
+**Doesn't prove.** N is small and the fixture's stochasticity is hand-set; this is
+a *measure* of run-to-run variance, not a statistical bound or a guarantee on the
+true tail. It shows the instrument surfaces a tail when one exists.

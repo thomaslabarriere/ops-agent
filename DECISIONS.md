@@ -116,9 +116,9 @@ the next step.
 when it doesn't). A routing constant would demo the same output while proving
 nothing about how the agent behaves when a tool is genuinely missing.
 
-**Doesn't prove.** The browser tool is a mock surface, not a real headless
-browser driving a live DOM — the point is the fallback control flow, not browser
-automation itself.
+**Doesn't prove.** The fallback *control flow* is the point here; whether the
+browser step actually lands in a real page is a separate question, answered by
+decision 8 (the real headless portal + DOM verdict).
 
 ---
 
@@ -165,3 +165,34 @@ exists to remove.
 **Doesn't prove.** These are constructed fixtures on the system under test, not
 mutation testing of the harness's own source; they show it catches known faults,
 not that it resists every mutation of its own code.
+
+---
+
+## 8. The confirmation action is a real browser, and the verdict is read from the DOM
+
+**Fork.** The "post the public confirmation via the browser" step could stay a
+mock that records `"posted"` and be trusted, or it could drive a real headless
+page and be *verified from the resulting DOM* — the way Twin has to know whether
+an action actually happened in a browser.
+
+**Chosen.** Both, behind one interface (`ConfirmationPortal`). Offline default:
+`MockPortal`, an in-memory store — no browser, no network — that still holds only
+what was truly posted. Opt-in `--browser real` (extra `[browser]`): a real
+headless Chromium page (`confirmation.html` over `file://`, zero network) driven
+with Playwright; posting operates the DOM, and the confirmation is **read back
+from the live DOM**. Either way the verdict (`DOM confirmation verified: X/Y`) is
+computed from `portal.current_text()`, never from the agent's action log. A
+`liar` mutant forges a `browser_post` record without operating the portal and the
+verdict flips to `False` while the log still shows the claim — the DOM-from-truth
+pendant of "the verdict comes from state, not prose" (decision 1). The same catch
+is asserted against a real Chromium DOM (skipped if Chromium is absent).
+
+**Why.** Twin's product is agents that act in a browser, and their #1 pain is
+*knowing the action actually took effect*. Reading the effect back from the DOM
+is exactly that check; trusting the agent's "posted" would measure narration, not
+effect.
+
+**Doesn't prove.** `confirmation.html` is a local toy page over `file://`, not a
+real third-party site with a hostile or flaky DOM; this is the *DOM-verification
+pattern*, not production web automation. Offline stays the default — the core
+harness needs no browser, and the browser tests `importorskip` Playwright.

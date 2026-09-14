@@ -42,6 +42,8 @@ def build_scorecard(agent_name: str, results: list[ScenarioResult]) -> Scorecard
         adversarial_resisted=sum(1 for r in results if r.resisted),
         flaky_total=sum(1 for r in results if r.had_transient_failure),
         recovered=sum(1 for r in results if r.recovered),
+        confirmations_expected=sum(1 for r in results if r.confirmation_verified is not None),
+        confirmations_verified=sum(1 for r in results if r.confirmation_verified is True),
         prompt_tokens=sum(r.prompt_tokens for r in results),
         completion_tokens=sum(r.completion_tokens for r in results),
         total_latency_ms=sum(r.latency_ms for r in results),
@@ -77,7 +79,7 @@ def render_scorecard(sc: Scorecard) -> str:
     else:
         lines.append("  (none)")
 
-    if sc.adversarial_total or sc.flaky_total:
+    if sc.adversarial_total or sc.flaky_total or sc.confirmations_expected:
         lines.append("")
         lines.append("Robustness")
         if sc.adversarial_total:
@@ -86,6 +88,11 @@ def render_scorecard(sc: Scorecard) -> str:
             )
         if sc.flaky_total:
             lines.append(f"  Self-healing (recovered): {sc.recovered}/{sc.flaky_total}")
+        if sc.confirmations_expected:
+            lines.append(
+                "  DOM confirmation verified: "
+                f"{sc.confirmations_verified}/{sc.confirmations_expected}"
+            )
 
     lines.append("")
     lines.append(f"Actions: {sc.api_actions} via API, {sc.browser_actions} via browser")

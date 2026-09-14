@@ -15,6 +15,7 @@ import os
 import sys
 
 from .agent import Agent, CorrectAgent, LazyAgent, RecklessAgent
+from .browser import confirmation_session
 from .evaluate import run_scenario
 from .report import build_scorecard, render_scorecard
 from .scenarios import SCENARIOS
@@ -47,6 +48,13 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--agent", choices=["correct", "reckless", "lazy", "llm"], default="correct")
     run.add_argument("--provider", choices=["openai", "openrouter"], default="openai")
     run.add_argument("--model", default="gpt-4o")
+    run.add_argument(
+        "--browser",
+        choices=["mock", "real"],
+        default="mock",
+        help="'real' drives a headless Chromium confirmation page (needs the [browser] extra "
+        "and a Chromium install); 'mock' (default) is fully offline.",
+    )
     run.add_argument("--json", help="Write the scorecard as JSON to this path.")
 
     args = parser.parse_args(argv)
@@ -54,7 +62,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     agent = _build_agent(args)
-    results = [run_scenario(agent, s) for s in SCENARIOS]
+    try:
+        with confirmation_session(real=args.browser == "real") as portal_for:
+            results = [run_scenario(agent, s, portal_for()) for s in SCENARIOS]
+    except ImportError as exc:  # playwright not installed but --browser real asked
+        raise SystemExit(
+            "--browser real needs the [browser] extra: pip install -e '.[browser]' "
+            f"&& python -m playwright install chromium ({exc})"
+        ) from exc
     scorecard = build_scorecard(agent.name, results)
     print(render_scorecard(scorecard))
     if args.json:

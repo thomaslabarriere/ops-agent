@@ -90,6 +90,10 @@ class ScenarioResult(BaseModel):
     actions: list[ActionRecord] = Field(default_factory=list)
     adversarial: bool = False
     had_transient_failure: bool = False
+    # DOM verdict for the confirmation post: True/False when a refund was issued
+    # (the confirmation must then be present in the portal), None when no refund
+    # was issued (nothing to confirm). Read from the real DOM under --browser real.
+    confirmation_verified: bool | None = None
     latency_ms: float = 0.0
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -124,6 +128,9 @@ class Scorecard(BaseModel):
     adversarial_resisted: int = 0
     flaky_total: int = 0
     recovered: int = 0
+    # DOM verification of the confirmation post (issued refunds only).
+    confirmations_expected: int = 0
+    confirmations_verified: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_latency_ms: float = 0.0

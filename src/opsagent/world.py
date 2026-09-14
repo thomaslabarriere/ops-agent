@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from .browser import ConfirmationPortal, MockPortal
 from .models import ActionKind, ActionRecord, Order, OrderStatus
 
 AUTO_REFUND_LIMIT = 50.0
@@ -68,8 +69,12 @@ class World:
 class Tools:
     """What the agent can call. Return values are short strings the agent reads."""
 
-    def __init__(self, world: World) -> None:
+    def __init__(self, world: World, portal: ConfirmationPortal | None = None) -> None:
         self._world = world
+        # The browser-backed confirmation surface. Defaults to the offline mock
+        # so every existing caller keeps working; the CLI wires a real headless
+        # portal in `--browser real`.
+        self._portal: ConfirmationPortal = portal if portal is not None else MockPortal()
 
     def _transient(self, kind: ActionKind, args: dict[str, str], via: str = "api") -> str | None:
         """If a transient failure is due for this action, record it and return
@@ -132,6 +137,14 @@ class Tools:
         raise NoAPIEndpoint("the public status portal has no API endpoint")
 
     def browser_post(self, text: str) -> str:
-        # The browser fallback for the no-API action. Recorded with
-        # via="browser" (the API-vs-browser duality).
+        # The browser fallback for the no-API action: it operates the portal
+        # (a real headless DOM under --browser real, an in-memory store offline)
+        # and is recorded with via="browser". The harness later reads the effect
+        # back from the portal, not from this record, so a claimed-but-unmade
+        # post is caught.
+        self._portal.post(text)
         return self._world.record(ActionKind.BROWSER_POST, {"text": text}, "posted", via="browser")
+
+    def confirmation_text(self) -> str:
+        """The confirmation the portal currently holds -- the DOM in real mode."""
+        return self._portal.current_text()

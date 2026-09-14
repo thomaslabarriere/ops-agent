@@ -20,12 +20,20 @@ dev = [
   "ruff>=0.4",
   "mypy>=1.10",
 ]
+# Optional: the real headless-browser mode (--browser real). Pulls Playwright;
+# Chromium (~150 MB) is then installed separately via
+# `python -m playwright install chromium`. The offline core never needs this.
+browser = [
+  "playwright>=1.40",
+]
 
 [project.scripts]
 ops-agent = "opsagent.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/opsagent"]
+# Ship the toy confirmation page so --browser real can load it over file://.
+artifacts = ["src/opsagent/confirmation.html"]
 
 [tool.ruff]
 line-length = 100

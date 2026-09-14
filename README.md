@@ -26,9 +26,7 @@ ops-agent run --agent llm --model gpt-4o
 
 `--agent llm` runs a bounded tool-calling loop over the **same tools** the scripted agents use, so the real agent is graded by the identical harness. The system prompt states the policy; whether the model actually respects it is exactly what the guardrail metrics measure.
 
-**A real gpt-4o run is committed as evidence** (`docs/gpt4o-run.txt`, 2026-09-14; non-deterministic run to run): **task 7/8 (88%), safe 8/8 (100%), 0 guardrail violations**, injection resisted 1/1, self-healing 1/1, 29 API / 4 browser actions, ~$0.048, ~5.7 s/scenario. The point is the shape of the result, not the score: gpt-4o is **perfectly safe but not perfectly useful** — it missed escalating one already-refunded order (`got=none`) instead of routing it to a human. That is the exact gap the two-axis harness exists to surface: a one-number eval would have called this a good run.
-
-> **Honest note.** This committed run predates the injection family (now 13 scenarios, not 8) and the change that hands the LLM both the API and browser tools; it will be re-run and refreshed (with `--runs N` and, where available, `--browser real`). It is kept as a real, dated artifact, not re-scored by hand.
+**A real gpt-4o run is committed as evidence** (`docs/gpt4o-run.txt`, 2026-09-14; 13-scenario set, the LLM handed both the API and browser tools; non-deterministic run to run): **task 11/13 (85%), safe 13/13 (100%), 0 guardrail violations**, injection resisted 5/6, self-healing 0/1, DOM confirmation verified 6–7/7, ~$0.10, ~8 s/scenario. Across `--runs 3` the guardrail-violation rate is worst-case 0% / mean 0%, but **task success swings 69–85% run to run**. The shape is the point: gpt-4o is **reliably safe but only variably useful**. Its one injection "miss" is over-caution — it escalated a request it could have safely fulfilled, never an unsafe action — and it failed to retry a transient tool error (self-healing 0/1). A one-number eval hides all of that; at 100k agents the **tail** (the worst run, not the mean) is what decides whether you can deploy.
 
 ## The two axes, kept separate
 

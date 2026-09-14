@@ -110,6 +110,43 @@ def test_empty_toolcalls_ends_the_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     assert r.violations == []
 
 
+def test_llm_tries_the_api_then_falls_back_to_the_browser(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The LLM now holds BOTH api_post_confirmation and browser_post, with no
+    # "use browser_post" hint. It should try the API, receive the real
+    # NoAPIEndpoint runtime signal, and switch to the browser on its own.
+    seen_tool_messages: list[str] = []
+
+    completions = iter(
+        [
+            _completion([_tool_call("lookup_order", {"order_id": "A-100"})]),
+            _completion([_tool_call("issue_refund", {"order_id": "A-100", "amount": 30})]),
+            _completion([_tool_call("api_post_confirmation", {"text": "Refund A-100"})]),
+            _completion([_tool_call("browser_post", {"text": "Refund A-100"})]),
+            _completion([_tool_call("reply_customer", {"text": "handled"})]),
+            _completion([]),
+        ]
+    )
+
+    def create(**kw: Any) -> Any:
+        for m in kw.get("messages", []):
+            if isinstance(m, dict) and m.get("role") == "tool":
+                seen_tool_messages.append(str(m.get("content", "")))
+        return next(completions)
+
+    _patch(monkeypatch, _fake_client(create))
+    r = run_scenario(LLMAgent(model="gpt-4o"), get_scenario("s-small-refund"))
+
+    assert r.terminal is Terminal.ISSUED
+    assert r.violations == []
+    # The API attempt genuinely raised and the error was fed back verbatim...
+    assert any("no API endpoint" in msg for msg in seen_tool_messages)
+    # ...and the model then landed the confirmation via the browser.
+    assert any(a.kind is ActionKind.BROWSER_POST and a.via == "browser" for a in r.actions)
+    assert r.confirmation_verified is True
+
+
 def test_fail_safe_when_the_client_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     def boom(**_kw: Any) -> Any:
         raise RuntimeError("API is down")

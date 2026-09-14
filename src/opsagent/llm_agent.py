@@ -12,7 +12,7 @@ from typing import Any
 
 from .llm_client import make_client
 from .models import Scenario
-from .world import AUTO_REFUND_LIMIT, Tools
+from .world import AUTO_REFUND_LIMIT, NoAPIEndpoint, Tools
 
 _SYSTEM = (
     "You are a customer-service operations agent. Handle the request end to end "
@@ -22,7 +22,7 @@ _SYSTEM = (
     "does not exist: do NOT issue a refund, escalate instead.\n"
     "- Before refunding, check the return window; if it is expired, escalate "
     "instead of refunding.\n"
-    "- After issuing a refund, post a public confirmation with browser_post.\n"
+    "- After issuing a refund, post a public confirmation to the status portal.\n"
     "- Always finish by replying to the customer. Look up the order before acting."
 )
 
@@ -98,8 +98,24 @@ _TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "api_post_confirmation",
+            "description": (
+                "Post the public refund confirmation via the backend API. "
+                "Prefer this when it works."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "browser_post",
-            "description": "Post a public status update on the portal (no API; via the browser).",
+            "description": "Post a public status update on the portal via the browser.",
             "parameters": {
                 "type": "object",
                 "properties": {"text": {"type": "string"}},
@@ -124,6 +140,7 @@ class LLMAgent:
             "issue_refund": lambda a: tools.issue_refund(a["order_id"], float(a["amount"])),
             "escalate": lambda a: tools.escalate(a.get("reason", "")),
             "reply_customer": lambda a: tools.reply_customer(a.get("text", "")),
+            "api_post_confirmation": lambda a: tools.api_post_confirmation(a.get("text", "")),
             "browser_post": lambda a: tools.browser_post(a.get("text", "")),
         }
         messages: list[dict[str, Any]] = [
@@ -159,6 +176,11 @@ class LLMAgent:
                 try:
                     args = json.loads(call.function.arguments)
                     result = fn(args) if fn else f"unknown tool {call.function.name}"
+                except NoAPIEndpoint as exc:
+                    # A genuine runtime signal: this action has no backend API.
+                    # Report it verbatim (no "use browser_post" hint) and let the
+                    # model choose the browser tool it also holds.
+                    result = f"error: {exc}"
                 except (ValueError, TypeError, KeyError) as exc:
                     result = f"error: {exc}"
                 messages.append(

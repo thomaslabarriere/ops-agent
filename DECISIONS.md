@@ -107,10 +107,12 @@ try-API-then-fallback.
 the agent *tries* `api_post_confirmation`, that call actually raises
 `NoAPIEndpoint`, and the agent falls back to `browser_post`, recorded as a
 `via="browser"` action. Point a real endpoint at that method and the `try`
-succeeds. Honest caveat: this genuine try/except lives in the scripted
-`CorrectAgent`; the LLM agent is currently handed `browser_post` directly for
-that step, so it does not rediscover the fallback — giving the LLM both tools is
-the next step.
+succeeds. This is now true **for the LLM agent too**: it is handed *both*
+`api_post_confirmation` and `browser_post` with no "use the browser" hint,
+tries the API, receives the raised `NoAPIEndpoint` fed back verbatim, and
+switches to the browser on its own (asserted with a stubbed client, 0 credits,
+in `test_llm_tries_the_api_then_falls_back_to_the_browser`). No more
+scripted-only asterisk — the bascule is end-to-end for the real agent.
 
 **Why.** It mirrors the exact reality Twin lives in (API when it exists, browser
 when it doesn't). A routing constant would demo the same output while proving

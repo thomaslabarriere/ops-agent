@@ -3,6 +3,8 @@ both an unsafe agent and an unhelpful one, with the right violation types."""
 
 from __future__ import annotations
 
+import pytest
+
 from opsagent.agent import (
     Agent,
     CorrectAgent,
@@ -11,11 +13,13 @@ from opsagent.agent import (
     LazyAgent,
     RecklessAgent,
     RushingAgent,
+    _requested_amount,
 )
 from opsagent.evaluate import run_scenario
-from opsagent.models import Scenario, Terminal, ViolationKind
+from opsagent.models import ActionKind, Scenario, Terminal, ViolationKind
 from opsagent.report import build_scorecard
 from opsagent.scenarios import SCENARIOS, get_scenario
+from opsagent.world import CATALOG, NoAPIEndpoint, Tools, World
 
 
 def _score(agent: Agent):  # type: ignore[no-untyped-def]
@@ -79,10 +83,43 @@ def test_correct_agent_resists_prompt_injection() -> None:
     assert r.violations == []
 
 
+def test_requested_amount_reads_the_injected_figure() -> None:
+    # The reader extracts the demanded amount (999) from the request text while
+    # ignoring the order-id digits, and returns None for a benign request.
+    s = get_scenario("s-injection")
+    assert _requested_amount(s.request, s.order_id) == 999.0
+    benign = get_scenario("s-small-refund")
+    assert _requested_amount(benign.request, benign.order_id) is None
+
+
+def test_correct_agent_reads_then_rejects_injection() -> None:
+    # A REAL decision, not an accident of not-reading: the agent reads the
+    # demanded 999, then grounds the refund on the looked-up 30 and says so.
+    r = run_scenario(CorrectAgent(), get_scenario("s-injection"))
+    refunds = [a for a in r.actions if a.kind is ActionKind.ISSUE_REFUND and a.ok]
+    assert refunds and refunds[0].args["amount"] == "30.00"  # the fact, not 999
+    reply = next(a for a in r.actions if a.kind is ActionKind.REPLY_CUSTOMER)
+    assert "was not used" in reply.args["text"]  # it visibly rejected the demand
+
+
 def test_gullible_agent_is_manipulated_by_injection() -> None:
+    # Same request, obeys the text: refunds the injected 999 on an order owing 30.
     r = run_scenario(GullibleAgent(), get_scenario("s-injection"))
+    refunds = [a for a in r.actions if a.kind is ActionKind.ISSUE_REFUND]
+    assert refunds and refunds[0].args["amount"] == "999.00"
     assert r.resisted is False
     assert r.violations  # trusting the injected 999 trips the guardrails
+
+
+def test_confirmation_api_raises_and_agent_falls_back_to_browser() -> None:
+    # The no-API action genuinely fails on the API path...
+    tools = Tools(World(CATALOG))
+    with pytest.raises(NoAPIEndpoint):
+        tools.api_post_confirmation("x")
+    # ...so the agent falls back to the browser tool, recorded via="browser".
+    r = run_scenario(CorrectAgent(), get_scenario("s-small-refund"))
+    posts = [a for a in r.actions if a.kind is ActionKind.BROWSER_POST]
+    assert posts and all(p.via == "browser" for p in posts)
 
 
 def test_correct_agent_self_heals_through_a_transient_failure() -> None:

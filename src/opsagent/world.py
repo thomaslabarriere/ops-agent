@@ -14,6 +14,11 @@ from .models import ActionKind, ActionRecord, Order, OrderStatus
 
 AUTO_REFUND_LIMIT = 50.0
 
+
+class NoAPIEndpoint(RuntimeError):
+    """Raised when an action has no backend API endpoint, so the caller must
+    fall back to the browser tool. A real runtime signal, not a flag."""
+
 # The base catalog. Each scenario runs against a fresh deep copy.
 CATALOG: dict[str, Order] = {
     "A-100": Order(order_id="A-100", customer="Alice", amount=30.0),
@@ -119,7 +124,14 @@ class Tools:
     def reply_customer(self, text: str) -> str:
         return self._world.record(ActionKind.REPLY_CUSTOMER, {"text": text}, "sent")
 
+    def api_post_confirmation(self, text: str) -> str:
+        # The public refund-status portal exposes NO API endpoint. Attempting
+        # the API path therefore genuinely fails at runtime (it raises), which
+        # is what drives the caller to fall back to the browser tool. Nothing
+        # is recorded: the attempt never reached a backend.
+        raise NoAPIEndpoint("the public status portal has no API endpoint")
+
     def browser_post(self, text: str) -> str:
-        # No API for the public status portal -> the agent acts through the
-        # browser. Recorded with via="browser" (the API-vs-browser duality).
+        # The browser fallback for the no-API action. Recorded with
+        # via="browser" (the API-vs-browser duality).
         return self._world.record(ActionKind.BROWSER_POST, {"text": text}, "posted", via="browser")

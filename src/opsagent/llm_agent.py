@@ -133,11 +133,17 @@ class LLMAgent:
         prompt_tokens = 0
         completion_tokens = 0
         for _ in range(6):  # bounded loop
-            completion = self._client.chat.completions.create(
-                model=self._model,
-                tools=_TOOLS,  # type: ignore[arg-type]
-                messages=messages,  # type: ignore[arg-type]
-            )
+            try:
+                completion = self._client.chat.completions.create(
+                    model=self._model,
+                    tools=_TOOLS,  # type: ignore[arg-type]
+                    messages=messages,  # type: ignore[arg-type]
+                )
+            except Exception:  # noqa: BLE001 - fail safe: never leave the case open
+                # An API/model failure must never turn into an unauthorized
+                # action. Escalate to a human and stop -- the safe terminal.
+                tools.escalate("llm call failed")
+                break
             if completion.usage is not None:
                 prompt_tokens += completion.usage.prompt_tokens or 0
                 completion_tokens += completion.usage.completion_tokens or 0

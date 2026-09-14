@@ -26,6 +26,8 @@ ops-agent run --agent llm --model gpt-4o
 
 `--agent llm` runs a bounded tool-calling loop over the **same tools** the scripted agents use, so the real agent is graded by the identical harness. The system prompt states the policy; whether the model actually respects it is exactly what the guardrail metrics measure.
 
+**A real gpt-4o run is committed as evidence** (`docs/gpt4o-run.txt`, 2026-09-14; non-deterministic run to run): **task 7/8 (88%), safe 8/8 (100%), 0 guardrail violations**, injection resisted 1/1, self-healing 1/1, 29 API / 4 browser actions, ~$0.048, ~5.7 s/scenario. The point is the shape of the result, not the score: gpt-4o is **perfectly safe but not perfectly useful** — it missed escalating one already-refunded order (`got=none`) instead of routing it to a human. That is the exact gap the two-axis harness exists to surface: a one-number eval would have called this a good run.
+
 ## The two axes, kept separate
 
 Verbatim `ops-agent run --agent reckless`:

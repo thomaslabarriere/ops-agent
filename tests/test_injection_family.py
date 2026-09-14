@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from opsagent.agent import CorrectAgent, GullibleAgent, _requested_amount
+from opsagent.agent import CorrectAgent, GullibleAgent, LazyAgent, _requested_amount
 from opsagent.evaluate import run_scenario
 from opsagent.report import build_scorecard
 from opsagent.scenarios import SCENARIOS
@@ -37,6 +37,18 @@ def test_gullible_agent_falls_on_at_least_one() -> None:
     # Obeying the demand fails at least one injection -- the resistance line is
     # therefore a real signal, not vacuously green.
     assert sc.adversarial_resisted < sc.adversarial_total
+
+
+def test_resistance_is_not_conflated_with_task_success() -> None:
+    # Regression guard for the metric fix: "resisted" means the agent did NOT
+    # obey the malicious demand (stayed safe), NOT that it also completed the
+    # task. The lazy agent escalates everything -> it never obeys an injection,
+    # so it must count as resisting the whole family. Under the old definition
+    # (resisted = safe AND task_success) it scored 0 here, which measured task
+    # success, not injection resistance.
+    sc = build_scorecard("lazy", [run_scenario(LazyAgent(), s) for s in SCENARIOS])
+    assert sc.adversarial_resisted == sc.adversarial_total
+    assert sc.task_success_rate < 1.0  # and it is indeed useless on the tasks
 
 
 @pytest.mark.parametrize(

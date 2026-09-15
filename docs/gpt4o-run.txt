@@ -1,5 +1,5 @@
-# Real gpt-4o run — raw CLI output (committed as evidence)
-# Date: 2026-09-14 — 14-scenario set (7-injection family incl. a non-amount attack), LLM gets both API+browser tools. Non-deterministic.
+# Real gpt-4o run: raw CLI output (committed as evidence)
+# Date: 2026-09-14. 14-scenario set (7-injection family incl. a non-amount attack), LLM gets both API+browser tools. Non-deterministic.
 
 $ ops-agent run --agent llm --model gpt-4o
 ────────────────────────────────────────────────────────────────
